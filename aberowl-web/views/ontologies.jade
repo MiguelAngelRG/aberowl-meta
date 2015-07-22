@@ -1,0 +1,40 @@
+extends layout
+block title
+  title AberOWL: Ontology list
+
+block content
+  .container-fluid
+    .jumbotron
+        h3.page-header Browse Ontologies
+        -if(messages.info) 
+          div.alert.alert-success(role='alert')
+            span.glyphicon.glyphicon-ok(aria-hidden='true')
+            span &nbsp; Info: #{messages.info}
+        -else if(messages.error)
+         div.alert.alert-danger(role='alert')
+            span.glyphicon.glyphicon-exclamation-sign(aria-hidden='true')
+            span &nbsp; Error: #{messages.error}
+        .table-responsive
+          table.table.table-striped(data-toggle="table" data-search-align="left" data-url="x", data-search="true")
+            thead
+              tr
+                th Acronym
+                th Status
+                th Name
+                th Description
+            tbody
+              for ontology in ontologies
+                tr
+                  td
+                   a(href='/ontology/#{ontology.id}') #{ontology.id} 
+                  td 
+                    -if(stati[ontology.id] == 'unloadable')
+                      span.label.label-warning Unloadable
+                    -else if(stati[ontology.id] == 'inconsistent')
+                      span.label.label-danger Inconsistent
+                    -else if(stati[ontology.id] == 'classified')
+                      span.label.label-sm.label-success Classified
+                    -else
+                      span.label.label-sm.label-default Unknown
+                  td #{ontology.name}
+                  td(style='word-wrap:break-word;width=65%') #{ontology.description}

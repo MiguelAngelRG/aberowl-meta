@@ -1,0 +1,350 @@
+extends layout
+
+block title
+  title AberOWL: Help pages
+
+block content
+  .container-fluid
+    .starter-template
+      -if(messages)
+        p #{messages.errors}
+      h1 AberOWL Help
+
+      p. 
+        AberOWL (pronounced /ˌæbəˈraʊl/) is a framework for ontology-based access to biological data.
+        It consists of a repository of bio-ontologies, a set of webservices which provide access
+        to OWL(-EL) reasoning over the ontologies, and several frontends which utilise the ontology
+        repository and reasoning services to provide access to specific biological datasets.
+
+      h2 Web Repository
+      
+      p.
+        The web-based repository front-end provides many features underpinned by reasoned access to
+        ontologies.
+
+      ul
+        li Upload and immediate classification of ontologies.
+        li Semantic querying of ontologies using Manchester OWL Syntax.
+        li Query Pubmed and PubMed central articles using ontology terms.
+        li Ontology-based access to RDF/Linked data through SPARQL integration.
+
+      h3.api Uploading ontologies
+
+      p To do this you must first create an account, then fill out the form on the 
+        a(href='/ontology/upload') upload page
+        span . It is probably a good idea to check whether an ontology exists first. You can
+          | also upload new versions of an existing ontology once you have claimed it.
+
+
+      h3.api Claiming ontologies
+
+      p.
+        To claim an ontology, and gain the ability to manage it and upload new versions, you should send an 
+        email to <a href=mailto:luke.slater@kaust.edu.sa>luke.slater@kaust.edu.sa</a> or <a href=mailto:robert.hoehndorf@kaust.edu.sa>robert.hoehndorf@kaust.edu.sa</a>.
+
+
+      h3.api Querying ontologies
+
+      h4 Class Query
+
+      p Aber-OWL provides semantic access to ontologies. It performs
+        |OWL-EL reasoning over a repository of ontologies using
+        |the <a href="https://code.google.com/p/elk-reasoner/">ELK
+        |reasoner</a> and answers queries over single ontologies or the
+        |full Aber-OWL ontology repository. Ontologies in Aber-OWL are
+        |identified by their name, and queries are performed
+        |in <a href="http://www.w3.org/TR/owl2-manchester-syntax/">Manchester
+        |OWL Syntax</a>. Class names in Manchester OWL syntax are
+        |rendered using the <tt>rdfs:label</tt> property of the class, and
+        |class names containing a space are surrounded by single quotes.
+        |To query an OWL class description, type the class description in Manchester OWL syntax in the query box.
+        | Make sure to select the kind of query: retrieve subclasses, equivalent classes, or superclasses of the class description.
+
+      h4 PubMed Query
+
+      p Aber-OWL: Pubmed is a semantic search engine for Pubmed and
+        |Pubmed Central. We maintain an index of Medline abstracts and
+        |fulltext articles in Pubmed Central. Aber-OWL: Pubmed takes an
+        |OWL query as input, an ontology, and query type
+        |(<tt>subclass</tt>, <tt>superclass</tt>, <tt>equivalent</tt>),
+        |retrieves all classes satisfying the query from Aber-OWL, and
+        |constructs a query based on the disjunction of class
+        |names. Relevant documents are then retrieved from a local Apache Lucene-based
+        |repository of abstracts and articles.
+        |PubMed queries can be accessed on the frontpage or for each ontology. When the PubMed tab in an ontology view is opened, a PubMed query is automatically executed to retrieve documents from
+        | PubMed and PubMed Central in which the queried concept occurs.
+
+      h4 SPARQL Query
+
+      p Aber-OWL: SPARQL provides semantic access to Linked Data by
+        |incorporating OWL reasoning within the SPARQL syntax. In
+        |particular, Aber-OWL: SPARQL performs query expansion based on
+        |SPARQL syntax extended by the following construct:
+        |<pre>OWL [querytype] [&lt;Aber-OWL service URI&gt;] [&lt;ontology name&gt;] { [OWL query] }</pre>
+        |For example, the query
+        |<pre>OWL subclass &lt;http://aber-owl.net/aber-owl/service/&gt; &lt;GO&gt; { part_of some 'apoptotic process' } </pre>
+        |will return a set of class URIs that satisfy the query <tt>part_of some 'apoptotic process'</tt> in the Gene Ontology.
+      p	There are two main forms in which the OWL statement can be embedded within a SPARQL query. The first is the <b><tt>VALUES</tt></b> form, in which
+        |the results of the OWL query are bound to a variable using the SPARQL <tt>VALUES</tt> statement. For example,
+        |<pre>
+        |  VALUES ?ontid { 
+        |    OWL subclass &lt;http://aber-owl.net/aber-owl/service/&gt; &lt;&gt; { part_of some 'apoptotic process' }
+        |  }
+        |</pre>
+        |will bind the ontology URIs resulting from the OWL query (<tt>part_of some 'apoptotic process'</tt>) to the variable ?ontid.
+
+        p The second use of the <tt>OWL</tt> statement is in the form of a <b><tt>FILTER</tt></b> statement. For example, the query
+        |<pre>
+        |  FILTER ( 
+        |    ?ontid IN ( OWL subclass &lt;http://aber-owl.net/aber-owl/service/&gt; &lt;http://purl.obolibrary.org/obo/hp.owl&gt; { arrhythmia } )
+        |  )
+        |</pre>
+        |will filter the results of a SPARQL query such that the values of ?ontid must be in the result list of the OWL query.
+
+        p As many SPARQL endpoints use different IRIs to refer to classes in ontologies, we have added the possibility to redefine prefixes for the
+        |resulting ontology classes such that they match the IRI scheme used by a particular SPARQL endpoint. To use this feature, the "Use OBO-style URIs"
+        |checkbox must be selected. This will transform the class IRIs resulting from an <tt>OWL</tt> query into OBO-style prefix form and will add
+        |the appropriate prefix to the SPARQL query if it has not been defined in the query itself. For example, the UniProt SPARQL endpoint
+        |(<a href="http://beta.sparql.uniprot.org">http://beta.sparql.uniprot.org</a>) uses the URI pattern "http://purl.uniprot.org/go/&lt;id&gt;" to refer
+        |to Gene Ontology classes (instead of the standard "http://purl.obolibrary.org/obo/GO_&lt;id&gt;". Adding the prefix definition
+        |<pre>
+        |PREFIX GO: &lt;http://purl.uniprot.org/go/&gt;
+        |</pre>
+        |to the SPARQL query and selecting the "Use OBO-style URIs" option will perform the query over UniProt.
+        |</p>
+
+
+      h2 AberOWL API
+
+      span The API root is 
+        b http://aber-owl.net/service/api/
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text runQuery.groovy
+
+      span This runs a Manchester OWL Syntax query against the server.
+
+      h4 Parameters
+      table.table.table-striped.table-responsive
+        thead
+          tr
+            th Name
+            th Type
+            th Optional
+            th Default
+            th Description
+        tbody
+          tr
+            td query
+            td string
+            td no
+            td None
+            td The Manchester OWL Syntax query
+          tr
+            td type
+            td string
+            td yes
+            td subeq
+            td The classes to return related to the query. One of 
+              b subclass
+              span , 
+              b superclass
+              span , 
+              b subeq
+              span , 
+              b supeq
+              span , 
+              b equivalent
+              span .
+          tr
+            td ontology
+            td string
+            td yes
+            td 
+            td An ontology to run the query against. If not provided, query will be run against all ontologies in the repository.
+          tr
+            td labels
+            td boolean
+            td yes
+            td false
+            td Whether to allow labels in the query. By default, URIs must be used.
+          tr
+            td direct
+            td boolean
+            td yes
+            td false
+            td Whether to retrieve only direct subclasses or superclasses. Ignored for equivalent queries.
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text queryNames.groovy
+
+      span This provides partial matches on labels.
+
+      h4 Parameters
+      table.table.table-striped.table-responsive
+        thead
+          tr
+            th Name
+            th Type
+            th Optional
+            th Default
+            th Description
+        tbody
+          tr
+            td term
+            td string
+            td no
+            td None
+            td A partial class name.
+          tr
+            td ontology
+            td string
+            td yes
+            td 
+            td An ontology to run the query against. If not provided, query will be run against all ontologies in the repository.
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text getClass.groovy
+
+      span Retrieve one particular class from an ontology, by label name.
+
+      h4 Parameters
+      table.table.table-striped.table-responsive
+        thead
+          tr
+            th Name
+            th Type
+            th Optional
+            th Default
+            th Description
+        tbody
+          tr
+            td query
+            td string
+            td no
+            td None
+            td A label of the class to retrieve.
+          tr
+            td ontology
+            td string
+            td no
+            td None
+            td An ontology to run the query against. 
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text findRoot.groovy
+
+      span Given a reference to a particular class by label and ontology, retrieve a route back to the root of the ontology.
+
+      h4 Parameters
+      table.table.table-striped.table-responsive
+        thead
+          tr
+            th Name
+            th Type
+            th Optional
+            th Default
+            th Description
+        tbody
+          tr
+            td query
+            td string
+            td no
+            td None
+            td A label of the class to retrieve.
+          tr
+            td ontology
+            td string
+            td no
+            td None
+            td An ontology to run the query against. 
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text getStats.groovy
+
+      span This provides stats on either one ontology, or all ontologies in the database.
+
+      h4 Parameters
+      table.table.table-striped.table-responsive
+        thead
+          tr
+            th Name
+            th Type
+            th Optional
+            th Default
+            th Description
+        tbody
+          tr
+            td ontology
+            td string
+            td yes
+            td 
+            td An ontology to retrieve stats for. If not provided, total stats will be returned for the whole repository.
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text listOntologies.groovy
+
+      span Return a list of all the ontologies in the repository.
+
+      h3.api 
+        span.glyphicon.glyphicon-circle-arrow-right
+        span.api-text getStatuses.groovy
+
+      span Return a list of all the ontologies in the repository, with associated load statuses.
+
+      h2 Frequently Asked Questions
+
+      h3.api Where can I read more?
+
+      p You can read the paper about AberOWL 
+        a(href='http://www.biomedcentral.com/1471-2105/16/26/') here
+        span .
+
+      h3.api What technology does AberOWL use?
+
+      p The AberOWL server is built using the 
+        a(href='http://www.groovy-lang.org/') Groovy
+        span  programming language, and builds on the 
+        a(href='http://owlapi.sourceforge.net') OWL-API
+        span  library. Reasoning is performed using the 
+        a(href='https://code.google.com/p/elk-reasoner/') ELK reasoner
+        span .
+
+      p The ontology repository is built using 
+        a(href='https://nodejs.org/') NodeJS
+        span , and, er, HTML (
+        a(href='http://jade-lang.com/') Jade
+        span ) and shares a 
+        a(href='http://redis.io/') Redis
+        span  instance with the AberOWL server backend.
+
+      h3.api Where is the source?
+
+      p Check it at 
+        a(href='https://github.com/bio-ontology-research-group/aberowl-meta') GitHub
+
+      h3.api Where to get more help or send feature requests/suggesetions?
+
+      p You can open an issue on our 
+        a(href='https://github.com/bio-ontology-research-group/aberowl-meta/issues') GitHub
+        span  or ask questions on our 
+        a(href='http://groups.google.co.uk/d/forum/aber-owl') mailing list
+        span .
+
+      h3.api Who works on AberOWL?
+      ul
+        li George Gkoutos (Aberystwyth University)
+        li Luke Slater (King Abdullah University of Science and Technology)
+        li Paul Schofield (University of Cambridge)
+        li Robert Hoehndorf (King Abdullah University of Science and Technology) 
+
+      h3.api How do I cite AberOWL?
+
+      p To cite AberOWL, please use the following reference:
+      p <a href=http://www.biomedcentral.com/1471-2105/16/26>Aber-OWL: a framework for ontology-based data access in biology</a>. Hoehndorf, R; Slater, L; Schofield, PN; Gkoutos, Georgios V. BMC Bioinformatics 16:26, 2015.
