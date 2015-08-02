@@ -1,7 +1,7 @@
 extends layout
 
 block title
-  title AberOWL: #{ontology.name}
+  title AberOWL: 
 
 block content
   .container-fluid
@@ -209,28 +209,21 @@ block content
                     td
                       fieldset
                         legend Versions
-                        p 
+                        p
                           select#versions.multiselect(multiple='multiple')
-                            - var keys = Object.keys(ontology.submissions)
-                            - keys.sort() 
-                            - keys.pop() // clear the last cause is the actual
-                            - var versions = []
-                            - var pos = 0
-                            - each index in keys 
-                                option(value='#{pos}') Version #{pos+1}
-                                - versions.push(null)
-                                - pos++
-                            - versions.push(pos)// Adding the last version which is the actual
+                            option(value='Mustard') Mustard
+                            option(value='Ketchup') Ketchup
+                            option(value='Relish') Relish
                     td
                       fieldset
-                        legend Properties
-                        p 
-                          select#properties.multiselect(multiple='multiple')
-                              
+                        legend Features
+                        p
+                          select#features.multiselect(multiple='multiple')
+                            option(value='Mustard') Mustard
+                            option(value='Ketchup') Ketchup
+                            option(value='Relish') Relish
             div#infovis(style='width:100%')
             div#ontology_value(style='display:none') #{ontology.id}
-            div#infovis(style='width:100%')
-            div#num_versions(style='display:none') #{JSON.stringify(versions)}
 
           -if(user && (user.admin || (user.owns && user.owns.contains(ontology.id))))
             div#manage
@@ -251,10 +244,10 @@ block content
                 h5 Current update method: 
                   -if(ontology.source == 'bioportal' || ontology.source == 'manual')
                     div#osource.label.label-success(href='#', data-placement='bottom', data-original-title='wat', data-content='test', rel='popover', data-trigger='hover') #{ontology.source}
-                     &nbsp;
+                    &nbsp;
                   -else 
                     div#osource.label.label-success(href='#', data-placement='bottom', data-original-title='wat', data-content='test', rel='popover', data-trigger='hover') Updating directly from: #{ontology.source}
-                     &nbsp;
+                    &nbsp;
                   a(href='#', onclick='openSourceForm()') change...
                   div#sourceForm
               a.btn.btn-sm.btn-warning(style='margin-left:10px', href='#', onclick='openVersionForm()', role='button') 
