@@ -226,10 +226,9 @@ block content
                         legend Properties
                         p 
                           select#properties.multiselect(multiple='multiple')
-                              
-            div#infovis(style='width:100%')
+               
+            div#infovis(style='width:100%')            
             div#ontology_value(style='display:none') #{ontology.id}
-            div#infovis(style='width:100%')
             div#num_versions(style='display:none') #{JSON.stringify(versions)}
 
           -if(user && (user.admin || (user.owns && user.owns.contains(ontology.id))))

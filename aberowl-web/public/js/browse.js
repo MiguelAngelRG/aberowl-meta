@@ -4,10 +4,29 @@ $(function() {
   var versions = []
   var properties = [];
   var st;
-  var json;
-  var CHILDTOSHOW = 18; //Constant that represents the Number of children to show.
-  var MAXCHARTOSHOW = 22; //Constant that represents the Number of characters in a label to show.
+  var MAXLEVEL = 2; //Constant that represents the number of levels to show
+  /*var margin = {top: 20, right: 120, bottom: 20, left: 120},
+  width = 960 - margin.right - margin.left,
+  height = 800 - margin.top - margin.bottom;*/
   
+  var margin = {top: 20, right: 450, bottom: 20, left: 450},
+  width = 960 - margin.right - margin.left,
+  height = 600 - margin.top - margin.bottom;
+  
+  var i = 0,duration = 750, root;
+
+  var tree = d3.layout.tree()
+		.size([height, width]);
+  var diagonal = d3.svg.diagonal()
+		.projection(function(d) { return [d.y, d.x]; });
+
+  var svg = d3.select("#infovis").append("svg")
+		.attr("width", width + margin.right + margin.left)
+		.attr("height", height + margin.top + margin.bottom)
+	  .append("g")
+		.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+ 
   $( "#tabs" ).tabs();
   $( "#tabs" ).on( "tabsactivate", function( event, ui ) {
     if(ui.newPanel.selector == '#pubmed') {
@@ -59,183 +78,172 @@ $(function() {
         $('#squery').val($('#squery').val().replace(/INSERT OWL HERE/, name));
       }
     } else if(ui.newPanel.selector == '#visualise' && !visitialised) {
-      //Create a new ST instance  
-      visitialised = true;
-      st = new $jit.ST({  
-          'injectInto': 'infovis',  
-          //add styles/shapes/colors  
-          //to nodes and edges  
-          levelsToShow: 2,
-            
-          //set overridable=true if you want  
-          //to set styles for nodes individually   
-          Node: {  
-            overridable: true,  
-            width: 200,  
-            height: 25,  
-            color: '#ccc'  
-          },  
-          //change the animation/transition effect  
-          transition: $jit.Trans.Quart.easeOut,  
-            
-          onBeforeCompute: function(node){  
-              console.log("loading " + node.name);  
-          },  
-            
-          onAfterCompute: function(node){  
-              console.log("done");  
-          },  
-        
-          //This method is triggered on label  
-          //creation. This means that for each node  
-          //this method is triggered only once.  
-          //This method is useful for adding event  
-          //handlers to each node label.  
-          onCreateLabel: function(label, node){  
-              //add some styles to the node label  
-              $('#wat').text(node.name);
-
-              var style = label.style;  
-              label.id = node.id;  
-              style.color = '#333';  
-              style.fontSize = '6';  
-              style.textAlign = 'center';  
-              style.height = "20px";  
-              label.innerHTML = node.name;  
-			  if(node.name.length>MAXCHARTOSHOW){
-				label.innerHTML = node.name.substr(0,MAXCHARTOSHOW)+"...";
-			  }
-			  
-              //Delete the specified subtree   
-              //when clicking on a label.  
-              //Only apply this method for nodes  
-              //in the first level of the tree.  
-              if(node._depth > 0) {  
-                  style.cursor = 'pointer';  
-                  label.onclick = function() {
-					st.onClick(node.id);                       
-				   };
-              }
-          },  
-          //This method is triggered right before plotting a node.  
-          //This method is useful for adding style   
-          //to a node before it's being rendered.  
-          onBeforePlotNode: function(node) {  
-              if (node._depth > 0) {  
-                  node.data.$color = '#f77';  
-              }  
-          },  
-
-          request: function(nodeId, level, onComplete) {                      
-            var node = st.graph.getNode(nodeId);  
-            var subtree = $jit.json.getSubtree(eval('('+json+')'),nodeId);
-            console.log("node.name-->"+node.name+"	selected-->"+node.selected+"	node.children-->"+node.children+"	subtree.children-->"+subtree.children);
-			if((node.selected)&&(node.children===undefined)&&(node.name!=="˅˅˅")&&(node.name!=="˄˄˄")){
-				$.when(buildTree(node,level)).done(function(child){	
-					subtree = child;
-				});
-			}else if((node.selected)&&((node.name==="˅˅˅")||(node.name==="˄˄˄"))){
-				var parent = node.getParents()[0];
-				st.select(parent.id);
-				parent.eachSubnode(function(child){
-					st.graph.removeNode(child.id);		
-				});
-				st.labels.clearLabels(); 
-				nodeId = parent.id;
-				subtree = $jit.json.getSubtree(eval('('+json+')'),nodeId);
-				console.log(subtree.toSource());
-				for(var posX=0, posY=0;posX < subtree.children.length;posX++,posY++){
-					if(node.getData("min") == posY){
-						subtree.children[posX].name="˄˄˄";
-						subtree.children[posX].data["$min"] = node.getData("min")-CHILDTOSHOW;
-						subtree.children[posX].data["$max"] = node.getData("min");
-						subtree.children[posX].children = emptyChildren(subtree.children[posX].children);
-					}
-					if(node.getData("max")+1 == posY){
-						subtree.children[posX].name = "˅˅˅";
-						subtree.children[posX].data["$min"]= node.getData("max");
-						subtree.children[posX].data["$max"] = node.getData("max")+CHILDTOSHOW;
-						subtree.children[posX].children = emptyChildren(subtree.children[posX].children);
-					}
-					if((posY<node.getData("min"))||(posY>(node.getData("max")+1))){
-						subtree.children.splice(posX,1); 
-						posX = posX - 1;
-					} 
-					
-				}             
-			}
-			console.log(subtree.toSource());
-			onComplete.onComplete(nodeId, subtree);  
-		  }	 
-        });
-		buildTree(null,null);
-      } 
-   });
+		//Create a new ST instance  
+		visitialised = true;		
+		//Init the visualization
+		root = buildTree(null,null);
+		d3.select(self.frameElement).style("height", "800px");
+	 }//if
+   });//tab
+   
    /**
-	 * This function update the json structure.
-	 */
-	function updateJSON(node){
-		if((node!=null)&&(node.children!=null)){  
-			var object = $.parseJSON(json);  
-			var path = getNodePath(node);
-			if(typeof(path)!=="undefined"){      
-				var nodeIndex = eval("object"+path);
-				if((typeof(nodeIndex)!=="undefined")&&(Array.isArray(nodeIndex))){
-					$.each(node.children,function(index,child){
-						nodeIndex.push(child);
-					});										
-				}				
-			}
-			json = JSON.stringify(object);	
-			//st.refresh();
-		}
-	};       
+    * It updates the nodes in the visualization
+    */
+	function update(source) {
+	  // Compute the new tree layout.
+	  var nodes = tree.nodes(root).reverse(),
+		  links = tree.links(nodes);
+
+	  // Normalize for fixed-depth.
+	  nodes.forEach(function(d) { d.y = d.depth * 180; });
+
+	  // Update the nodes…
+	  var node = svg.selectAll("g.node")
+		  .data(nodes, function(d) { return d.id || (d.id = ++i); });
+
+	  // Enter any new nodes at the parent's previous position.
+	  var nodeEnter = node.enter().append("g")
+		  .attr("class", "node")
+		  .attr("transform", function(d) { return "translate(" + source.y0 + "," + source.x0 + ")"; })
+		  .on("click", click);
+
+	  nodeEnter.append("circle")
+		  .attr("r", 1e-6)
+		  .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+	  nodeEnter.append("text")
+		  .attr("x", function(d) { return d.children || d._children ? -10 : 10; })
+		  .attr("dy", ".35em")
+		  .attr("text-anchor", function(d) { return d.children || d._children ? "end" : "start"; })
+		  .text(function(d) { return d.name; })
+		  .style("fill-opacity", 1e-6);
+
+	  // Transition nodes to their new position.
+	  var nodeUpdate = node.transition()
+		  .duration(duration)
+		  .attr("transform", function(d) { return "translate(" + d.y + "," + d.x + ")"; });
+
+	  nodeUpdate.select("circle")
+		  .attr("r", 4.5)
+		  .style("fill", function(d) { return d._children ? "lightsteelblue" : "#fff"; });
+
+	  nodeUpdate.select("text")
+		  .style("fill-opacity", 1);
+
+	  // Transition exiting nodes to the parent's new position.
+	  var nodeExit = node.exit().transition()
+		  .duration(duration)
+		  .attr("transform", function(d) { return "translate(" + source.y + "," + source.x + ")"; })
+		  .remove();
+
+	  nodeExit.select("circle")
+		  .attr("r", 1e-6);
+
+	  nodeExit.select("text")
+		  .style("fill-opacity", 1e-6);
+
+	  // Update the links…
+	  var link = svg.selectAll("path.link")
+		  .data(links, function(d) { return d.target.id; });
+
+	  // Enter any new links at the parent's previous position.
+	  link.enter().insert("path", "g")
+		  .attr("class", "link")
+		  .attr("d", function(d) {
+			var o = {x: source.x0, y: source.y0};
+			return diagonal({source: o, target: o});
+		  });
+
+	  // Transition links to their new position.
+	  link.transition()
+		  .duration(duration)
+		  .attr("d", diagonal);
+
+	  // Transition exiting nodes to the parent's new position.
+	  link.exit().transition()
+		  .duration(duration)
+		  .attr("d", function(d) {
+			var o = {x: source.x, y: source.y};
+			return diagonal({source: o, target: o});
+		  })
+		  .remove();
+
+	  // Stash the old positions for transition.
+	  nodes.forEach(function(d) {
+		d.x0 = d.x;
+		d.y0 = d.y;
+	  });
+	}
+
 	/**
-	 * This function obtains the path of a given node in JSON.
+	 * Toggle children on click.
 	 */
-	function getNodePath(node){
-		var child = node;
-		var parent = null;
-		var path = ".children";
-		if(node!=null){
-			parent = node.getParents()[0];
-			while(parent!=null){         
-				var pos = 0;
-				parent.eachSubnode(function(subNode){
-					if(child.id === subNode.id){
-						path = ".children["+(pos)+"]"+path;
-					}
-					pos = pos + 1;
-				});   
-				child = parent;
-				parent = parent.getParents()[0];
-			}
-		}    
-		return(path);
-	}; 
-	
-	function checkNumberChildren(node){
-		if(node.children.length>CHILDTOSHOW){
-			node.children = node.children.slice(0,CHILDTOSHOW);
-			node.children[CHILDTOSHOW-1].name="˅˅˅";
-			node.children[CHILDTOSHOW-1].data["$min"] = CHILDTOSHOW;
-			node.children[CHILDTOSHOW-1].data["$max"] = CHILDTOSHOW+CHILDTOSHOW;
-			node.children[CHILDTOSHOW-1].children = emptyChildren(node.children[CHILDTOSHOW-1].children);
-		}
-		return(node);
+	function click(d) {
+	  checkLevel(d);
+	  if (d.children) {
+		//collapse
+		d._children = d.children;
+		d.children = null;
+	  } else {
+		//expand
+		d.children = d._children;
+		d._children = null;
+	  }
+	  update(d);
 	};
 	
 	/**
-	 * This function clean the children array of a given node.
-	 */
-	function emptyChildren(children){
-		if($.isArray(children)){
-			while(children.length>0){
-				children.pop();
-			}
+	 * This function checks the node level.
+	 */ 
+	function checkLevel(node){
+	  if((node!=null)&&(typeof(node)!="undefined")){
+		if((node.data["level"]!="undefined")&&(node.data["level"]<=MAXLEVEL)){
+		  var newRoot = getRoot(node.data["owlClass"],node.name);
+		  node.data["level"] = MAXLEVEL;
+		  updateTree(node,MAXLEVEL-1); 
 		}
-		return(children);
+	  }
 	};
+
+
+	/**
+	 * This function update the tree
+	 */
+	 function updateTree(node,level){
+		var def = $.Deferred();
+		if(level==0){
+		  var newRoot = getRoot(node.data["owlClass"],node.name);
+		  $.when(getRecursiveSubClasses(newRoot,0,false)).done(function(jsonTree){  
+			if((jsonTree._children!=null)&&(jsonTree._children.length>0)){
+			  node._children = [];
+			  node._children = $.merge(node._children,jsonTree._children);
+			  update(node);
+			}
+		  });
+		  return(def.resolve(node));
+		}
+		if(node._children!=null){
+		  node._children.forEach(function(child){
+			child.data["level"] = MAXLEVEL;
+			updateTree(child,level-1);
+		  });
+		}
+		return(def.promise());
+	 }
+
+   /**
+	 * This function gets the root of a tree. Basically it creates the root node using provided data. 
+	 */
+	function getRoot(owlClass,label){
+		var root = null;
+		if((owlClass!=null)&&(label!=null)){
+			root = {};
+			root["owlClass"] = owlClass;
+			root["label"] = label;
+		}
+		return(root);
+	};   
+
 	/**
 	 * This function prints out recursevely the JSON structure.
 	 */
@@ -252,6 +260,9 @@ $(function() {
 		});
 	 };
    
+   /**
+    * It gets the subclases from a uriClass given.
+    */
    function getSubClasses(uriClass,ontology,version,type,objectProperty,label){
 	   if((type=='subeq')&&(objectProperty!=null)&&(label!=null)){
 			console.log('/service/api/runQuery.groovy?type='+type+'&direct=true&query='+uriClass+' SOME '+label+'&ontology='+ontology+'&version='+version);
@@ -261,40 +272,47 @@ $(function() {
 			return($.getJSON('/service/api/runQuery.groovy?type='+type+'&direct=true&query='+uriClass+'&ontology='+ontology+'&version='+version));
 		}
    };
+   /**
+    * It provides the colour of each node.
+    */
    function getColor(index){
 	   	var numElements = $('.checkbox').length+1;//number of checkboxes and the actual version
-	   	console.log(numElements);
 		var grades = 360;
 		var angle = Math.round(360/numElements)*index;
 		return('hsl('+angle+',100%,50%)');
 	};
-	function buildNode(data,version,level){
-		var node = null;
+	
+	/**
+	 * This function builds a node using provided data.
+	 */
+	function buildNode(data, level){
+		var node = null
 		if(data!=null){
 			node = {};
-			node['id'] = data.classURI+level; //To avoid graphs
-			node['name'] = data.label;
-			node['data'] = {};
-			node.data['$owlClass'] = encodeURIComponent(data.owlClass);
-			node.data['$version'] = version;
-			node.data['$color'] = getColor(version);
-			node['children'] = []; 
-
-		}	
-		return(node)
-	}	
+			node["name"] = data.label;
+			node["data"] = {};
+			node.data["owlClass"] = data.owlClass;
+			node.data["level"] = MAXLEVEL - level;
+			//collapse the nodes children = null and  _children = []
+			node["children"] = null;
+			node["_children"] = null;
+			node["versions"] = null;
+			node["properties"] = null;
+		}
+		return(node);
+	};
 	
-	function buildTree(node,colorIndex,level){
+	/**
+	 * Create the tree.
+	 */
+	function buildTree(node,colorIndex){
 		var reset = false;
 		var def = $.Deferred();
 		if(node==null){
 			reset = true;
-			node = {
-			'id': 'root',
-			'name': 'Owl:Thing',
-			'data': {'$owlClass': '<http://www.w3.org/2002/07/owl%23Thing>','$color':getColor(colorIndex)},
-			'children': []
-			};
+			var owlClass = "<http://www.w3.org/2002/07/owl#Thing>";
+			var label = "owlThing";
+			var root = getRoot(owlClass,label);
 		}
 		//At least, we will have one version (the actual version) but the vector is checked. 	
 		if((versions!=null)&&(versions.length>0)){
@@ -305,7 +323,9 @@ $(function() {
 					//We include all children
 					$.each(jsonData.result,function(index,child){
 						//the version is the colorIndex,
-						node.children.push(buildNode(child,node.data['$version'],level));						
+						if(!child.deprecated){
+							node.children.push(buildNode(child,node.data['$version']));		
+						}				
 					});					 
 					var promises = [];
 					//Versions
@@ -364,7 +384,9 @@ $(function() {
 								$.each(subtree.result,function(index,child){
 									console.log('child is already included'+jQuery.inArray(child,jsonData.result));
 									if(jQuery.inArray(child,jsonData.result)<0){//The child is not contained
-										node.children.push(buildNode(child,colorIndex,level));
+										if(!child.deprecated){
+											node.children.push(buildNode(child,colorIndex,level));
+										}
 									}
 									
 								});
@@ -374,35 +396,34 @@ $(function() {
 				}			
 			}).done(function(){
 				if(reset){
-					json=JSON.stringify(node);
-					//check the number of nodes before paint
-					checkNumberChildren(node);
-					//load json data  
-					//st.loadJSON(eval( '(' + json + ')' )); 
-					st.loadJSON(node);
-					//compute node positions and layout  
-					st.compute();  
-					//optional: make a translation of the tree  
-					//Emulate a click on the root node.  
-					st.onClick(st.root);  
+					console.log(node)
+					root = node;
+					root.x0 = height / 2;
+					root.y0 = 0;		  
+					function collapse(d) {
+						if (d.children) {
+							d._children = d.children;
+							d._children.forEach(collapse);
+							d.children = null;
+						}
+					}	  
+					root.children.forEach(collapse);
+					update(root);
 				}else{
-					updateJSON(node);
-					checkNumberChildren(node);
+
 				}
 				def.resolve(node);								
 			});				
 		}
 		return(def.promise());					
 	};
-   $.getJSON('/service/api/getObjectProperties.groovy?ontology='+ontology,function(jsonData,textStatus,jqXHR) {
-	   console.log(jsonData.toSource());
-
-		if((jsonData!=null)&&(jsonData.length>0)){
+	
+	//Get the object properties from the server.
+	$.getJSON('/service/api/getObjectProperties.groovy?ontology='+ontology,function(jsonData,textStatus,jqXHR) {		
+		if(jsonData!=null){
 			$.each(jsonData,function(key,value){		
-				console.log(key);
-				console.log(value);
 				$('#properties').append($("<option></option>")
-			//.attr("value",value)
+			.attr("value",null)//to iniciate the vars.
 			.text(key)); 			
 			});
 		}		
@@ -433,7 +454,7 @@ $(function() {
 				}
 			});
 			console.log(versions.toSource());
-			buildTree(null,0);
+			buildTree(null);
 		});
 		$('#properties').change(function(){
 			$('#properties option').each(function(index){
@@ -444,7 +465,7 @@ $(function() {
 				}
 			});
 			console.log(properties.toSource());
-			buildTree(null,0);
+			buildTree(null);
 		});	
-	  });
+  });
 });
